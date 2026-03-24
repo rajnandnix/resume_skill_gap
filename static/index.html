@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SkillGap AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<div class="app">
+
+    <h1>SkillGap AI</h1>
+    <p class="subtitle">Analyze your resume & get personalized skill roadmap</p>
+
+    <div class="card">
+
+        <label>Upload Resume</label>
+        <input type="file" id="resume" accept=".pdf,application/pdf">
+
+        <label>Job Description</label>
+        <textarea id="job" rows="4" placeholder="e.g. Data Analyst focused on SQL, dashboards, stakeholder reporting, and business insights"></textarea>
+
+        <button onclick="analyze()">Analyze</button>
+
+        <div id="loader" class="loader hidden"></div>
+
+        <div id="result" class="result"></div>
+
+    </div>
+
+</div>
+
+<script src="/static/script.js"></script>
+</body>
+</html>
