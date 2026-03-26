@@ -67,8 +67,14 @@ async function analyze() {
 
         // 🔥 VERY IMPORTANT DEBUG
         if (!response.ok) {
-            let text = await response.text();
-            throw new Error("Server Error: " + text);
+            let message = "Request failed. Please try again.";
+            try {
+                const err = await response.json();
+                message = err.detail || JSON.stringify(err);
+            } catch (_) {
+                message = await response.text();
+            }
+            throw new Error(message);
         }
 
         const data = await response.json();

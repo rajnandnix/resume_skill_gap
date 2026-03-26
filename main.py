@@ -1,15 +1,23 @@
-from fastapi import FastAPI, UploadFile, Form, HTTPException, status
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException, status
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
-from config import ALLOWED_ORIGINS, MAX_FILE_SIZE_BYTES, MAX_JOB_DESCRIPTION_LENGTH
+from config import (
+    ALLOWED_ORIGINS,
+    MAX_FILE_SIZE_BYTES,
+    MAX_JOB_DESCRIPTION_LENGTH,
+    APP_ENV,
+    validate_settings,
+)
 from resume_parser import extract_resume_text
 from skill_extractor import extract_skills
 from skill_gap import extract_job_skills, find_skill_gap
 from recommendations import generate_learning_plan
 
 app = FastAPI()
+
+validate_settings()
 
 # ✅ Serve frontend (HTML, CSS, JS)
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -29,10 +37,15 @@ def home():
     return FileResponse("static/index.html")
 
 
+@app.get("/health")
+def health():
+    return {"status": "ok", "environment": APP_ENV}
+
+
 # ✅ MAIN API ROUTE
 @app.post("/analyze")
 async def analyze_resume(
-    file: UploadFile,
+    file: UploadFile = File(...),
     job_description: str = Form(...)
 ):
     try:
@@ -93,30 +106,21 @@ async def analyze_resume(
             )
         except Exception as ai_error:
             print("OpenAI Error:", ai_error)
-            ai_report = {
-                "profile_summary": [
-                    "AI analysis is currently unavailable.",
-                    "Please check OPENAI_API_KEY and try again."
-                ],
-                "required_skills": job_skills,
-                "strengths": resume_skills[:6],
-                "gap_areas": missing_skills[:8],
-                "roadmap": {
-                    "week_1_2": ["Review core role concepts and required tools."],
-                    "week_3_4": ["Complete one guided project using missing skills."],
-                    "month_2_3": ["Build and publish portfolio projects with measurable outcomes."]
-                },
-                "resources": ["Official documentation", "Role-specific beginner-to-advanced course"],
-                "projects": ["End-to-end portfolio project aligned to the role"],
-                "interview_tips": ["Prepare STAR stories", "Practice role-specific technical questions"],
-                "top_next_actions": [
-                    "Set up API key",
-                    "Re-run analysis",
-                    "Prioritize top 3 missing skills",
-                    "Create a 4-week study plan",
-                    "Build one project"
-                ]
-            }
+            error_text = str(ai_error).lower()
+            if "insufficient_quota" in error_text or "exceeded your current quota" in error_text:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="AI service quota exceeded. Please top up OpenAI billing or use a key with available credits."
+                )
+            if "invalid_api_key" in error_text:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="AI service key is invalid. Please configure a valid OPENAI_API_KEY."
+                )
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI analysis service is temporarily unavailable. Please try again shortly."
+            )
 
         # 📦 Step 6: Return output
         return {

@@ -1,3 +1,5 @@
+import re
+
 CANONICAL_SKILLS = {
     "python": {"python"},
     "sql": {"sql", "postgresql", "mysql", "sqlite"},
@@ -35,7 +37,7 @@ def extract_job_skills(job_description):
     extracted = set()
 
     for skill, aliases in CANONICAL_SKILLS.items():
-        if any(alias in content for alias in aliases):
+        if any(re.search(r"\b" + re.escape(alias) + r"\b", content) for alias in aliases):
             extracted.add(skill)
 
     # Infer expected skills from generic role names

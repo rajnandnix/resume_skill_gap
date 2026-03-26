@@ -1,3 +1,5 @@
+import re
+
 CANONICAL_SKILLS = {
     "python": {"python"},
     "machine learning": {"machine learning", "ml"},
@@ -19,7 +21,7 @@ def extract_skills(text):
     found_skills = []
 
     for skill, aliases in CANONICAL_SKILLS.items():
-        if any(alias in content for alias in aliases):
+        if any(re.search(r"\b" + re.escape(alias) + r"\b", content) for alias in aliases):
             found_skills.append(skill)
 
     return sorted(found_skills)

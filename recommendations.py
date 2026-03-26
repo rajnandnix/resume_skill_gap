@@ -1,7 +1,6 @@
-import os
 import json
 from openai import OpenAI
-from config import OPENAI_MODEL
+from config import OPENAI_MODEL, OPENAI_API_KEY
 
 def generate_learning_plan(
     resume_text,
@@ -11,13 +10,12 @@ def generate_learning_plan(
     missing_skills
 ):
 
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
+    if not OPENAI_API_KEY:
         raise ValueError(
-            "OPENAI_API_KEY is not set. Add it as an environment variable before running the app."
+            "OPENAI service is not configured."
         )
 
-    client = OpenAI(api_key=api_key)
+    client = OpenAI(api_key=OPENAI_API_KEY)
 
     # Keep prompt size controlled for long resumes
     trimmed_resume_text = (resume_text or "")[:6000]
@@ -72,4 +70,21 @@ Rules:
     )
 
     raw_content = response.choices[0].message.content
-    return json.loads(raw_content)
+    parsed = json.loads(raw_content)
+
+    # Enforce consistent response shape for frontend rendering
+    return {
+        "profile_summary": parsed.get("profile_summary", []),
+        "required_skills": parsed.get("required_skills", []),
+        "strengths": parsed.get("strengths", []),
+        "gap_areas": parsed.get("gap_areas", []),
+        "roadmap": {
+            "week_1_2": parsed.get("roadmap", {}).get("week_1_2", []),
+            "week_3_4": parsed.get("roadmap", {}).get("week_3_4", []),
+            "month_2_3": parsed.get("roadmap", {}).get("month_2_3", [])
+        },
+        "resources": parsed.get("resources", []),
+        "projects": parsed.get("projects", []),
+        "interview_tips": parsed.get("interview_tips", []),
+        "top_next_actions": parsed.get("top_next_actions", [])
+    }
